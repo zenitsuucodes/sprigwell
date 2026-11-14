@@ -1,0 +1,186 @@
+---
+import Layout from '../layouts/Layout.astro'
+import Lawn from '../components/Lawn'
+import YearTimeline from '../components/YearTimeline'
+import PackagePicker from '../components/PackagePicker'
+import Booking from '../components/Booking'
+import Faq from '../components/Faq'
+import { brand, services, yards } from '../data'
+
+const blobs: Record<string, string> = {
+  grass: 'linear-gradient(135deg,#b6f08a,#5db04a)',
+  bloom: 'linear-gradient(135deg,#ffc2d9,#ff7aa8)',
+  stone: 'linear-gradient(135deg,#efe6d6,#c4b293)',
+  leaf: 'linear-gradient(135deg,#d6f2b0,#3f9a36)',
+  sun: 'linear-gradient(135deg,#fff3a8,#ffb547)',
+  frost: 'linear-gradient(135deg,#eaf6ff,#9fd0f5)',
+}
+const icon: Record<string, string> = {
+  grass: 'M4 20c2-6 2-10 1-14 3 3 4 7 4 14M10 20c0-7 1-11 4-15-1 5 0 10 1 15M16 20c1-5 2-8 4-11 0 4-1 8-1 11',
+  bloom: 'M12 21v-7M12 14a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM12 8V5M15 11h3M9 11H6',
+  stone: 'M3 19h18M5 19l2-6h10l2 6M8 13l1-4h6l1 4',
+  leaf: 'M5 19C5 10 10 5 20 4c0 9-5 15-14 15zM5 19l8-8',
+  sun: 'M12 16a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM12 2v2M12 20v2M4 12H2M22 12h-2',
+  frost: 'M12 3v18M4.5 7.5l15 9M19.5 7.5l-15 9',
+}
+---
+<Layout title="Sprigwell Lawn & Garden | Lawn care and landscaping in Oakville, Burlington and Milton" description="Seasonal lawn care, garden beds, patios and snow clearing in Oakville, Burlington and Milton. Build your year of packages and book a free yard visit.">
+  <header class="nav" id="nav">
+    <div class="wrap nav-inner">
+      <a href="#top" class="logo" aria-label="Sprigwell home">
+        <svg viewBox="0 0 36 36" aria-hidden="true"><circle cx="18" cy="18" r="17" fill="#FFD23F"/><path d="M18 29V17M18 18c0-5 4-8 9-8 0 5-4 8-9 8zM18 21c0-4-3-6.5-7.5-6.5 0 4 3 6.5 7.5 6.5z" fill="#3d8a33"/></svg>
+        <span>Sprigwell</span>
+      </a>
+      <nav aria-label="Main">
+        <a href="#services">Services</a>
+        <a href="#year">The year</a>
+        <a href="#packages">Packages</a>
+        <a href="#yards">Yards</a>
+        <a href="#faq">FAQ</a>
+      </nav>
+      <a class="btn sun small" href="#book">Free yard visit</a>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero" id="top">
+      <div class="hero-sky" aria-hidden="true"></div>
+      <div class="hero-cloud c1" aria-hidden="true"></div>
+      <div class="hero-cloud c2" aria-hidden="true"></div>
+      <div class="wrap hero-copy">
+        <span class="badge">Oakville · Burlington · Milton</span>
+        <h1>Your best lawn<br /><span class="grad">starts here.</span></h1>
+        <p class="lede">Mowing, feeding, garden beds, patios and snow. Pick the seasons you want covered, and one local crew looks after your yard all year.</p>
+        <div class="hero-actions">
+          <a class="btn sun" href="#packages">Build my year</a>
+          <a class="btn ghost" href="#book">Book a free visit</a>
+        </div>
+      </div>
+      <div class="hero-lawn">
+        <Lawn client:load />
+      </div>
+    </section>
+
+    <section class="section services" id="services" aria-labelledby="services-title">
+      <div class="wrap">
+        <div class="head">
+          <span class="eyebrow">What we do</span>
+          <h2 id="services-title">Everything outside, <span class="grad">sorted.</span></h2>
+        </div>
+        <div class="svc-grid">
+          {services.map((s) => (
+            <article class="svc reveal">
+              <span class="svc-blob" style={`background:${blobs[s.hue]}`}>
+                <svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="#173A1C" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d={icon[s.hue]} /></svg>
+              </span>
+              <h3>{s.title}</h3>
+              <p>{s.text}</p>
+            </article>
+          ))}
+        </div>
+      </div>
+    </section>
+
+    <YearTimeline client:visible />
+
+    <section class="section packages" id="packages" aria-labelledby="packages-title">
+      <div class="wrap">
+        <div class="head">
+          <span class="eyebrow">Packages</span>
+          <h2 id="packages-title">Build your year. <span class="grad">See the total.</span></h2>
+          <p>Tick what you want covered. Packages you pinned on the timeline are already here, and the chart shows when the work happens.</p>
+        </div>
+        <PackagePicker client:visible />
+      </div>
+    </section>
+
+    <section class="section yards" id="yards" aria-labelledby="yards-title">
+      <div class="wrap">
+        <div class="head">
+          <span class="eyebrow">Recent yards</span>
+          <h2 id="yards-title">Made outside, <span class="grad">for outside.</span></h2>
+        </div>
+        <div class="yard-grid">
+          {yards.map((y, i) => (
+            <figure class={`yard reveal y${i}`}>
+              <div class="yard-img"><img src={`/yards/${y.file}.webp`} alt={`${y.title}, ${y.place}`} loading="lazy" width="1400" height="1050" /></div>
+              <figcaption>
+                <b>{y.title}</b>
+                <span>{y.place}</span>
+                <span class="tags">{y.tags.map((t) => <i>{t}</i>)}</span>
+              </figcaption>
+            </figure>
+          ))}
+        </div>
+      </div>
+    </section>
+
+    <section class="section book" id="book" aria-labelledby="book-title">
+      <div class="wrap book-grid">
+        <div class="book-intro">
+          <span class="eyebrow">Free yard visit</span>
+          <h2 id="book-title">Let's walk your <span class="grad">yard together.</span></h2>
+          <p>A Sprigwell designer visits for 45 minutes, measures up and talks through what you want. You get a written plan and a firm price, with no obligation.</p>
+          <ul class="ticks">
+            <li>Weather-aware: rainy days become a quick video call</li>
+            <li>Same crew lead all season</li>
+            <li>Licensed, insured, WSIB covered</li>
+          </ul>
+          <p class="call">Rather talk? <a href={`tel:${brand.phoneHref}`}>{brand.phone}</a></p>
+        </div>
+        <div class="book-card"><Booking client:visible /></div>
+      </div>
+    </section>
+
+    <section class="section faq" id="faq" aria-labelledby="faq-title">
+      <div class="wrap faq-grid">
+        <div class="head">
+          <span class="eyebrow">Questions</span>
+          <h2 id="faq-title">Good to <span class="grad">know.</span></h2>
+        </div>
+        <Faq client:visible />
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-glow" aria-hidden="true"></div>
+    <div class="wrap">
+      <p class="footer-big">Grass is greener<br />on <span class="grad">your side.</span></p>
+      <div class="footer-row">
+        <div>
+          <b>Sprigwell Lawn &amp; Garden</b>
+          <span>Serving {brand.area}</span>
+          <a href={`tel:${brand.phoneHref}`}>{brand.phone}</a>
+        </div>
+        <nav aria-label="Footer">
+          <a href="#services">Services</a><a href="#year">The year</a><a href="#packages">Packages</a><a href="#book">Free visit</a>
+        </nav>
+      </div>
+      <div class="footer-bottom">
+        <span>© {new Date().getFullYear()} Sprigwell Lawn &amp; Garden</span>
+        <a href={brand.credit}>Website by Dhanush</a>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    // Header turns solid after scrolling; static cards fade up when they enter view.
+    const nav = document.getElementById('nav')
+    const onScroll = () => nav?.classList.toggle('solid', window.scrollY > 40)
+    window.addEventListener('scroll', onScroll, { passive: true })
+    onScroll()
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach((e) => {
+        if (e.isIntersecting) {
+          e.target.classList.add('in')
+          io.unobserve(e.target)
+        }
+      })
+    }, { rootMargin: '0px 0px -10% 0px' })
+    document.querySelectorAll('.reveal').forEach((el, i) => {
+      ;(el as HTMLElement).style.transitionDelay = `${(i % 3) * 80}ms`
+      io.observe(el)
+    })
+  </script>
+</Layout>
