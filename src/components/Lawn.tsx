@@ -33,7 +33,8 @@ const vertex = /* glsl */ `
     vec2 uv = (offset.xz - uLawnMin) / uLawnSize;
     vec4 mow = texture2D(uMow, uv);
     vMow = mow.rg;
-    float h = bladeHeight * mix(1.0, 0.3, mow.r);
+    float cut = smoothstep(0.15, 0.85, mow.r);
+    float h = bladeHeight * mix(1.0, 0.16, cut);
 
     vec3 p = position;
     float c = cos(angle), s = sin(angle);
@@ -41,7 +42,7 @@ const vertex = /* glsl */ `
     p.y *= h;
 
     // wind: bend more towards the tip, less once mowed
-    float bend = (sin(uTime * 1.6 + offset.x * 0.35 + offset.z * 0.22) * 0.5 + 0.5) * uWind * (1.0 - mow.r * 0.7);
+    float bend = (sin(uTime * 1.6 + offset.x * 0.35 + offset.z * 0.22) * 0.5 + 0.5) * uWind * (1.0 - cut * 0.9);
     float t = position.y; // 0 at root, 1 at tip
     p.x += bend * t * t * 0.45;
     p.z += bend * t * t * 0.2;
@@ -59,6 +60,8 @@ const fragment = /* glsl */ `
   uniform vec3 uBase;
   uniform vec3 uTip;
   uniform vec3 uFog;
+  uniform vec3 uLight;
+  uniform vec3 uDark;
   varying float vH;
   varying float vTint;
   varying vec2 vMow;
@@ -67,9 +70,10 @@ const fragment = /* glsl */ `
   void main() {
     vec3 col = mix(uBase, uTip, smoothstep(0.0, 1.0, vH));
     col *= 0.88 + vTint * 0.24;
-    // mowing stripes: light one way, dark the other
-    float stripe = mix(-0.17, 0.2, vMow.g);
-    col += vec3(stripe * 0.6, stripe, stripe * 0.4) * vMow.r;
+    // mowing stripes: cut grass turns an even light or dark green, depending on direction
+    float cut = smoothstep(0.15, 0.85, vMow.r);
+    vec3 stripe = mix(uDark, uLight, step(0.5, vMow.g));
+    col = mix(col, stripe * (0.86 + vH * 0.22 + vTint * 0.08), cut);
     float fog = smoothstep(9.0, 26.0, vDist);
     col = mix(col, uFog, fog);
     gl_FragColor = vec4(col, 1.0);
@@ -99,10 +103,6 @@ export default function Lawn() {
     camera.lookAt(0, 0, -3)
 
     // soil under the grass
-    const ground = new THREE.Mesh(new THREE.PlaneGeometry(W + 6, D + 6), new THREE.MeshBasicMaterial({ color: '#2f6b2a' }))
-    ground.rotation.x = -Math.PI / 2
-    ground.position.set(0, 0, Z0 + D / 2)
-    scene.add(ground)
 
     // mow map: R = mowed, G = stripe direction
     const mowData = new Uint8Array(MAP_W * MAP_H * 4)
@@ -152,11 +152,74 @@ export default function Lawn() {
       uBase: { value: new THREE.Color('#2d6a26') },
       uTip: { value: new THREE.Color('#9bdc5c') },
       uFog: { value: new THREE.Color('#bfe9c6') },
+      uLight: { value: new THREE.Color('#bde97a') },
+      uDark: { value: new THREE.Color('#6fb84a') },
     }
     const mat = new THREE.ShaderMaterial({ vertexShader: vertex, fragmentShader: fragment, uniforms, side: THREE.DoubleSide })
+
+    const groundMat = new THREE.ShaderMaterial({
+      uniforms,
+      vertexShader: /* glsl */ `
+        varying vec2 vWorld;
+        varying float vDist;
+        void main() {
+          vec4 w = modelMatrix * vec4(position, 1.0);
+          vWorld = w.xz;
+          vec4 mv = viewMatrix * w;
+          vDist = -mv.z;
+          gl_Position = projectionMatrix * mv;
+        }`,
+      fragmentShader: /* glsl */ `
+        uniform sampler2D uMow;
+        uniform vec2 uLawnMin;
+        uniform vec2 uLawnSize;
+        uniform vec3 uLight;
+        uniform vec3 uDark;
+        uniform vec3 uFog;
+        varying vec2 vWorld;
+        varying float vDist;
+        void main() {
+          vec4 mow = texture2D(uMow, (vWorld - uLawnMin) / uLawnSize);
+          float cut = smoothstep(0.15, 0.85, mow.r);
+          vec3 soil = vec3(0.17, 0.4, 0.15);
+          vec3 col = mix(soil, mix(uDark, uLight, step(0.5, mow.g)) * 0.92, cut);
+          col = mix(col, uFog, smoothstep(9.0, 26.0, vDist));
+          gl_FragColor = vec4(col, 1.0);
+        }`,
+    })
+    const ground = new THREE.Mesh(new THREE.PlaneGeometry(W + 6, D + 6), groundMat)
+    ground.rotation.x = -Math.PI / 2
+    ground.position.set(0, 0, Z0 + D / 2)
+    scene.add(ground)
     const grass = new THREE.Mesh(blade, mat)
     grass.frustumCulled = false
     scene.add(grass)
+
+    // ---- clippings: a small pool of particles thrown up behind the mower ----
+    const CLIP = 360
+    const clipPos = new Float32Array(CLIP * 3)
+    const clipVel = new Float32Array(CLIP * 3)
+    const clipLife = new Float32Array(CLIP)
+    const clipGeo = new THREE.BufferGeometry()
+    clipGeo.setAttribute('position', new THREE.BufferAttribute(clipPos, 3))
+    const clipMat = new THREE.PointsMaterial({ color: '#c8f08a', size: 0.1, transparent: true, opacity: 0.95, depthWrite: false })
+    const clippings = new THREE.Points(clipGeo, clipMat)
+    clippings.frustumCulled = false
+    scene.add(clippings)
+    let clipNext = 0
+    const throwClippings = (x: number, z: number, n: number) => {
+      for (let k = 0; k < n; k++) {
+        const i = clipNext++ % CLIP
+        clipPos[i * 3] = x + (Math.random() - 0.5) * 1.2
+        clipPos[i * 3 + 1] = 0.15
+        clipPos[i * 3 + 2] = z + (Math.random() - 0.5) * 0.6
+        clipVel[i * 3] = (Math.random() - 0.5) * 2.4
+        clipVel[i * 3 + 1] = 1.6 + Math.random() * 2
+        clipVel[i * 3 + 2] = 0.6 + Math.random() * 1.4
+        clipLife[i] = 0.7 + Math.random() * 0.5
+      }
+    }
+    for (let i = 0; i < CLIP; i++) clipPos[i * 3 + 1] = -10
 
     // ---- mowing ----
     const ray = new THREE.Raycaster()
@@ -169,7 +232,7 @@ export default function Lawn() {
     const stamp = (x: number, z: number, light: boolean) => {
       const u = ((x + W / 2) / W) * MAP_W
       const v = ((z - Z0) / D) * MAP_H
-      const r = 4 // brush radius in map pixels (about 0.9 m)
+      const r = 6 // brush radius in map pixels (about 1.4 m, a mower deck)
       for (let j = -r; j <= r; j++) {
         for (let i = -r; i <= r; i++) {
           if (i * i + j * j > r * r) continue
@@ -200,6 +263,7 @@ export default function Lawn() {
           const t = s / steps
           stamp(last.x + (hit.x - last.x) * t, last.z + (hit.z - last.z) * t, light)
         }
+        if (!reduced) throwClippings(hit.x, hit.z, Math.min(10, steps * 2))
       }
       last = hit.clone()
     }
@@ -244,8 +308,19 @@ export default function Lawn() {
       raf = requestAnimationFrame(loop)
       if (!visible) return
       const now = performance.now()
-      uniforms.uTime.value += Math.min((now - prev) / 1000, 0.05)
+      const dt = Math.min((now - prev) / 1000, 0.05)
+      uniforms.uTime.value += dt
       prev = now
+      for (let i = 0; i < CLIP; i++) {
+        if (clipLife[i] <= 0) continue
+        clipLife[i] -= dt
+        clipVel[i * 3 + 1] -= 9 * dt
+        clipPos[i * 3] += clipVel[i * 3] * dt
+        clipPos[i * 3 + 1] = Math.max(0.04, clipPos[i * 3 + 1] + clipVel[i * 3 + 1] * dt)
+        clipPos[i * 3 + 2] += clipVel[i * 3 + 2] * dt
+        if (clipLife[i] <= 0) clipPos[i * 3 + 1] = -10
+      }
+      clipGeo.attributes.position.needsUpdate = true
       if (dirty) {
         mowTex.needsUpdate = true
         dirty = false
@@ -271,6 +346,9 @@ export default function Lawn() {
       mat.dispose()
       mowTex.dispose()
       ground.geometry.dispose()
+      groundMat.dispose()
+      clipGeo.dispose()
+      clipMat.dispose()
       renderer.dispose()
       el.removeChild(renderer.domElement)
     }
