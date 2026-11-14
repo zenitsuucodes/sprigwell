@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import * as THREE from 'three'
+import { buildButterflies, buildFlowers, buildHorizon, buildMower } from './lawnProps'
 
 /*
  * A patch of lawn made of tens of thousands of instanced grass blades.
@@ -102,6 +103,23 @@ export default function Lawn() {
     camera.position.set(0, 3.1, 8.6)
     camera.lookAt(0, 0, -3)
 
+    // light and haze for the solid scenery (the grass shades itself)
+    scene.add(new THREE.HemisphereLight('#e8f7ff', '#4c7a35', 1.5))
+    const sun = new THREE.DirectionalLight('#fff1c8', 2.2)
+    sun.position.set(6, 10, 4)
+    scene.add(sun)
+    scene.fog = new THREE.Fog('#c6ecd0', 15, 36)
+    scene.add(buildHorizon(W))
+    const flowers = buildFlowers(small ? 140 : 300)
+    scene.add(flowers.group)
+    const butterflies = buildButterflies(small ? 3 : 5)
+    if (!reduced) scene.add(butterflies.group)
+    const mower = buildMower()
+    const PARK = new THREE.Vector3(small ? 1 : 3.6, 0, 2.4)
+    mower.group.position.copy(PARK)
+    mower.group.rotation.y = -Math.PI / 2.4
+    scene.add(mower.group)
+
     // soil under the grass
 
     // mow map: R = mowed, G = stripe direction
@@ -202,7 +220,7 @@ export default function Lawn() {
     const clipLife = new Float32Array(CLIP)
     const clipGeo = new THREE.BufferGeometry()
     clipGeo.setAttribute('position', new THREE.BufferAttribute(clipPos, 3))
-    const clipMat = new THREE.PointsMaterial({ color: '#c8f08a', size: 0.1, transparent: true, opacity: 0.95, depthWrite: false })
+    const clipMat = new THREE.PointsMaterial({ color: '#c8f08a', size: 0.08, transparent: true, opacity: 0.95, depthWrite: false })
     const clippings = new THREE.Points(clipGeo, clipMat)
     clippings.frustumCulled = false
     scene.add(clippings)
@@ -210,12 +228,12 @@ export default function Lawn() {
     const throwClippings = (x: number, z: number, n: number) => {
       for (let k = 0; k < n; k++) {
         const i = clipNext++ % CLIP
-        clipPos[i * 3] = x + (Math.random() - 0.5) * 1.2
-        clipPos[i * 3 + 1] = 0.15
-        clipPos[i * 3 + 2] = z + (Math.random() - 0.5) * 0.6
-        clipVel[i * 3] = (Math.random() - 0.5) * 2.4
-        clipVel[i * 3 + 1] = 1.6 + Math.random() * 2
-        clipVel[i * 3 + 2] = 0.6 + Math.random() * 1.4
+        clipPos[i * 3] = x + (Math.random() - 0.5) * 0.3
+        clipPos[i * 3 + 1] = 0.3
+        clipPos[i * 3 + 2] = z + (Math.random() - 0.5) * 0.3
+        clipVel[i * 3] = Math.cos(heading) * (1.5 + Math.random() * 1.5) + (Math.random() - 0.5)
+        clipVel[i * 3 + 1] = 1.2 + Math.random() * 1.6
+        clipVel[i * 3 + 2] = -Math.sin(heading) * (1.5 + Math.random() * 1.5) + (Math.random() - 0.5)
         clipLife[i] = 0.7 + Math.random() * 0.5
       }
     }
@@ -226,16 +244,27 @@ export default function Lawn() {
     const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0)
     const hit = new THREE.Vector3()
     const ndc = new THREE.Vector2()
-    let last: THREE.Vector3 | null = null
+    const target = new THREE.Vector3()
+    const lastCut = new THREE.Vector3().copy(mower.group.position)
+    let driving = false
+    let heading = mower.group.rotation.y
     let dirty = false
+    const isCut = (x: number, z: number) => {
+      const u = Math.floor(((x + W / 2) / W) * MAP_W)
+      const v = Math.floor(((z - Z0) / D) * MAP_H)
+      if (u < 0 || v < 0 || u >= MAP_W || v >= MAP_H) return false
+      return mowData[(v * MAP_W + u) * 4] > 128
+    }
 
     const stamp = (x: number, z: number, light: boolean) => {
       const u = ((x + W / 2) / W) * MAP_W
       const v = ((z - Z0) / D) * MAP_H
-      const r = 6 // brush radius in map pixels (about 1.4 m, a mower deck)
-      for (let j = -r; j <= r; j++) {
-        for (let i = -r; i <= r; i++) {
-          if (i * i + j * j > r * r) continue
+      const R = 0.82 // cut radius in metres, matches the mower deck
+      const rx = Math.ceil(R / (W / MAP_W))
+      const rz = Math.ceil(R / (D / MAP_H))
+      for (let j = -rz; j <= rz; j++) {
+        for (let i = -rx; i <= rx; i++) {
+          if ((i * i) / (rx * rx) + (j * j) / (rz * rz) > 1) continue
           const px = Math.round(u + i)
           const py = Math.round(v + j)
           if (px < 0 || py < 0 || px >= MAP_W || py >= MAP_H) continue
@@ -252,22 +281,12 @@ export default function Lawn() {
       ndc.set(((e.clientX - b.left) / b.width) * 2 - 1, -((e.clientY - b.top) / b.height) * 2 + 1)
       ray.setFromCamera(ndc, camera)
       if (!ray.ray.intersectPlane(plane, hit)) return
-      if (hit.z < Z0 || hit.z > Z0 + D) return
+      if (hit.z < Z0 + 6 || hit.z > Z0 + D) return
       setHint(false)
-      if (last) {
-        // stamp along the segment so fast moves leave continuous stripes
-        const dx = hit.x - last.x
-        const light = Math.abs(dx) > Math.abs(hit.z - last.z) ? dx > 0 : hit.z - last.z > 0
-        const steps = Math.ceil(last.distanceTo(hit) / 0.25)
-        for (let s = 1; s <= steps; s++) {
-          const t = s / steps
-          stamp(last.x + (hit.x - last.x) * t, last.z + (hit.z - last.z) * t, light)
-        }
-        if (!reduced) throwClippings(hit.x, hit.z, Math.min(10, steps * 2))
-      }
-      last = hit.clone()
+      target.set(Math.max(-W / 2 + 1, Math.min(W / 2 - 1, hit.x)), 0, hit.z)
+      driving = true
     }
-    const onLeave = () => { last = null }
+    const onLeave = () => { driving = false }
     renderer.domElement.addEventListener('pointermove', onMove)
     renderer.domElement.addEventListener('pointerleave', onLeave)
     renderer.domElement.addEventListener('pointerdown', onMove)
@@ -311,6 +330,44 @@ export default function Lawn() {
       const dt = Math.min((now - prev) / 1000, 0.05)
       uniforms.uTime.value += dt
       prev = now
+      // drive the mower toward the pointer
+      const mp = mower.group.position
+      if (driving) {
+        const dx = target.x - mp.x
+        const dz = target.z - mp.z
+        const dist = Math.hypot(dx, dz)
+        if (dist > 0.05) {
+          const speed = Math.min(dist * 7, 14) * dt
+          mp.x += (dx / dist) * speed
+          mp.z += (dz / dist) * speed
+          const want = Math.atan2(dx, dz)
+          let diff = want - heading
+          diff = Math.atan2(Math.sin(diff), Math.cos(diff))
+          heading += diff * Math.min(1, dt * 9)
+          mower.group.rotation.y = heading
+          for (const w of mower.wheels) w.rotation.x += speed / 0.22
+        }
+      }
+      // engine idle shake, stronger while moving
+      mower.group.position.y = Math.sin(uniforms.uTime.value * 60) * (driving ? 0.006 : 0.002)
+      const moved = Math.hypot(mp.x - lastCut.x, mp.z - lastCut.z)
+      if (moved > 0.08) {
+        const dx = mp.x - lastCut.x
+        const dz = mp.z - lastCut.z
+        const light = Math.abs(dx) > Math.abs(dz) ? dx > 0 : dz > 0
+        const steps = Math.ceil(moved / 0.2)
+        for (let k = 1; k <= steps; k++) stamp(lastCut.x + (dx * k) / steps, lastCut.z + (dz * k) / steps, light)
+        // clippings fly out of the side chute
+        if (!reduced) {
+          const cx = mp.x + Math.cos(heading) * 0.85
+          const cz = mp.z - Math.sin(heading) * 0.85
+          throwClippings(cx, cz, Math.min(8, steps * 2))
+        }
+        lastCut.set(mp.x, 0, mp.z)
+      }
+      flowers.update(isCut, dt)
+      if (!reduced) butterflies.update(uniforms.uTime.value)
+
       for (let i = 0; i < CLIP; i++) {
         if (clipLife[i] <= 0) continue
         clipLife[i] -= dt
@@ -332,6 +389,9 @@ export default function Lawn() {
     ;(el as HTMLDivElement & { resetLawn?: () => void }).resetLawn = () => {
       mowData.fill(0)
       dirty = true
+      driving = false
+      mower.group.position.copy(PARK)
+      lastCut.copy(PARK)
     }
 
     return () => {
@@ -349,6 +409,13 @@ export default function Lawn() {
       groundMat.dispose()
       clipGeo.dispose()
       clipMat.dispose()
+      scene.traverse((o) => {
+        const mesh = o as THREE.Mesh
+        mesh.geometry?.dispose()
+        const mm = mesh.material as THREE.Material | THREE.Material[] | undefined
+        if (Array.isArray(mm)) mm.forEach((x) => x.dispose())
+        else mm?.dispose()
+      })
       renderer.dispose()
       el.removeChild(renderer.domElement)
     }
@@ -363,7 +430,7 @@ export default function Lawn() {
     <div className="lawn" ref={host} aria-label="Interactive 3D lawn. Move your pointer across it to mow stripes." role="img">
       <div className={`mow-hint ${hint ? '' : 'gone'}`} aria-hidden="true">
         <svg viewBox="0 0 24 24"><path d="M4 16h11l3-6h2M6 16v-3h7M7 19.5a1.5 1.5 0 1 0 0-.01M16 19.5a1.5 1.5 0 1 0 0-.01" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>
-        Move across the grass to mow it
+        Point at the grass to start mowing
       </div>
       <div className="mow-meter" aria-live="polite">
         <span className="mow-bar"><i style={{ width: `${mowed}%` }} /></span>

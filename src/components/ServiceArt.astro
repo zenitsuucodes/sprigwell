@@ -1,0 +1,87 @@
+---
+/* Small illustrated scenes for the service cards (120 x 90). */
+interface Props { kind: string }
+const { kind } = Astro.props
+---
+<svg class="svc-art" viewBox="0 0 120 90" aria-hidden="true">
+  {kind === 'grass' && (
+    <g>
+      <rect x="0" y="40" width="120" height="50" rx="10" fill="#7cc95a" />
+      {[0, 1, 2, 3, 4].map((k) => <rect x="0" y={40 + k * 10} width="120" height="10" fill={k % 2 ? '#8fd66a' : '#6fbd4e'} />)}
+      <g transform="translate(64 30)">
+        <ellipse cx="0" cy="26" rx="22" ry="5" fill="#2c5a22" opacity=".25" />
+        <rect x="-18" y="8" width="36" height="14" rx="6" fill="#FFC23F" />
+        <rect x="-10" y="0" width="20" height="10" rx="4" fill="#173A1C" />
+        <circle cx="-13" cy="22" r="5" fill="#222" /><circle cx="13" cy="22" r="5" fill="#222" />
+        <path d="M-12 8 L -30 -18 M 12 8 L -6 -18 M -32 -18 H -4" stroke="#173A1C" stroke-width="3" stroke-linecap="round" />
+      </g>
+      {[[10, 34], [20, 30], [30, 36], [104, 32]].map(([x, y]) => <path d={`M${x} 40 l -2 -10 M ${x + 3} 40 l 1 -9 M ${x + 6} 40 l 3 -8`} stroke="#4c9a3a" stroke-width="2" stroke-linecap="round" />)}
+    </g>
+  )}
+  {kind === 'bloom' && (
+    <g>
+      <path d="M4 70 C 30 56, 90 56, 116 70 L 116 90 L 4 90 Z" fill="#7a5233" />
+      <path d="M4 70 C 30 58, 90 58, 116 70" stroke="#9b6d45" stroke-width="3" fill="none" />
+      {([[20, '#e8455a'], [38, '#ffcf3a'], [56, '#ff8fb8'], [74, '#e8455a'], [92, '#a78bfa'], [104, '#ffcf3a']] as [number, string][]).map(([x, c], k) => (
+        <g transform={`translate(${x} 64)`}>
+          <path d={`M0 0 V ${-22 - (k % 3) * 6}`} stroke="#3d8a33" stroke-width="2.5" />
+          <path d="M0 -6 C -10 -12, -8 -24, -2 -28 C -2 -18, 0 -12, 0 -8 Z" fill="#4fa83f" />
+          <path d={`M-6 ${-22 - (k % 3) * 6} c -1 -9, 2 -13, 6 -14 c 4 1, 7 5, 6 14 c -3 4, -9 4, -12 0 z`} fill={c} />
+        </g>
+      ))}
+      <circle cx="98" cy="16" r="9" fill="#FFD23F" />
+    </g>
+  )}
+  {kind === 'stone' && (
+    <g>
+      <path d="M0 30 L 120 30 L 120 90 L 0 90 Z" fill="#8fd66a" />
+      <g transform="translate(60 60) skewX(-24)">
+        {[0, 1, 2].map((r) => [0, 1, 2, 3].map((c) => (
+          <rect x={-46 + c * 24 + (r % 2) * 12} y={-24 + r * 16} width="21" height="13" rx="2" fill={['#e9dfcc', '#d8cab0', '#cdbd9f'][(r + c) % 3]} stroke="#b9a684" stroke-width="1" />
+        )))}
+      </g>
+      {[[12, 74], [20, 82], [100, 76]].map(([x, y]) => <ellipse cx={x} cy={y} rx="7" ry="4" fill="#d8cab0" stroke="#b9a684" />)}
+      <path d="M96 40 c 0 -14 18 -14 18 0 z" fill="#3d8a33" />
+    </g>
+  )}
+  {kind === 'leaf' && (
+    <g>
+      <rect x="6" y="30" width="78" height="44" rx="10" fill="#3d8a33" />
+      <rect x="6" y="30" width="78" height="10" rx="5" fill="#5aa844" />
+      {[14, 28, 42, 56, 70].map((x) => <path d={`M${x} 32 v 40`} stroke="#2f7a2c" stroke-width="1.5" />)}
+      <rect x="6" y="74" width="78" height="10" fill="#7a5233" />
+      <g transform="translate(96 40) rotate(20)">
+        <path d="M-4 -26 L 0 6 M 4 -26 L 0 6" stroke="#c9d2cc" stroke-width="4" stroke-linecap="round" />
+        <path d="M-4 6 C -14 16, -12 30, -6 30 M 4 6 C 14 16, 12 30, 6 30" stroke="#c2452c" stroke-width="5" stroke-linecap="round" fill="none" />
+      </g>
+      {[[90, 20], [100, 14], [108, 24]].map(([x, y]) => <ellipse cx={x} cy={y} rx="3" ry="1.6" fill="#5aa844" transform={`rotate(30 ${x} ${y})`} />)}
+    </g>
+  )}
+  {kind === 'sun' && (
+    <g>
+      <rect x="0" y="62" width="120" height="28" fill="#9bc96a" />
+      <path d="M14 78 C 24 54, 70 54, 80 78 Z" fill="#c46a2a" />
+      {Array.from({ length: 16 }, (_, k) => (
+        <ellipse cx={20 + (k * 37) % 56} cy={62 + ((k * 13) % 14)} rx="5" ry="3" fill={['#e07a2e', '#c4a23a', '#b5452c', '#e8a33a'][k % 4]} transform={`rotate(${k * 41} ${20 + (k * 37) % 56} ${62 + ((k * 13) % 14)})`} />
+      ))}
+      <path d="M98 80 L 78 18" stroke="#7a5233" stroke-width="3.5" stroke-linecap="round" />
+      <path d="M68 16 L 90 22 M 70 12 l -1 -7 M 76 14 l 0 -8 M 82 16 l 1 -8 M 88 18 l 2 -7" stroke="#8a8f94" stroke-width="3" stroke-linecap="round" />
+      {[[30, 20], [50, 30], [100, 40]].map(([x, y], k) => <ellipse cx={x} cy={y} rx="4" ry="2.4" fill={k % 2 ? '#e07a2e' : '#c4a23a'} transform={`rotate(${k * 50} ${x} ${y})`} />)}
+    </g>
+  )}
+  {kind === 'frost' && (
+    <g>
+      <rect x="0" y="46" width="120" height="44" fill="#eaf3fb" />
+      <path d="M0 46 C 30 38, 90 38, 120 46" fill="#ffffff" />
+      <path d="M20 90 L 46 46 L 74 46 L 100 90 Z" fill="#9aa7b4" />
+      <path d="M58 50 V 86" stroke="#ffd23f" stroke-width="2" stroke-dasharray="6 6" />
+      <path d="M20 90 L 46 46 M 100 90 L 74 46" stroke="#ffffff" stroke-width="5" />
+      <g transform="translate(92 32) rotate(-20)">
+        <path d="M0 0 V 34" stroke="#7a5233" stroke-width="3.5" stroke-linecap="round" />
+        <path d="M-12 34 H 12 L 10 46 H -10 Z" fill="#2f6e9e" />
+        <path d="M-5 0 H 5" stroke="#2a2a2a" stroke-width="4" stroke-linecap="round" />
+      </g>
+      {[[14, 14], [34, 24], [64, 10], [84, 20], [108, 8], [48, 34]].map(([x, y]) => <circle cx={x} cy={y} r="2.4" fill="#9fd0f5" />)}
+    </g>
+  )}
+</svg>

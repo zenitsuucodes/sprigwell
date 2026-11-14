@@ -5,6 +5,7 @@ import YearTimeline from '../components/YearTimeline'
 import PackagePicker from '../components/PackagePicker'
 import Booking from '../components/Booking'
 import Faq from '../components/Faq'
+import ServiceArt from '../components/ServiceArt.astro'
 import { brand, services, yards } from '../data'
 
 const blobs: Record<string, string> = {
@@ -45,8 +46,14 @@ const icon: Record<string, string> = {
   <main>
     <section class="hero" id="top">
       <div class="hero-sky" aria-hidden="true"></div>
-      <div class="hero-cloud c1" aria-hidden="true"></div>
-      <div class="hero-cloud c2" aria-hidden="true"></div>
+      <svg class="cloud c1" viewBox="0 0 220 110" aria-hidden="true"><defs><linearGradient id="cg0" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset=".7" stop-color="#f4fbff"/><stop offset="1" stop-color="#cfe6f5"/></linearGradient></defs><g fill="url(#cg0)"><circle cx="60" cy="66" r="34"/><circle cx="104" cy="48" r="42"/><circle cx="150" cy="62" r="34"/><circle cx="182" cy="78" r="22"/><circle cx="34" cy="82" r="20"/><rect x="30" y="70" width="170" height="32" rx="16"/></g><path d="M40 98 H 190" stroke="#bcd9ec" stroke-width="6" stroke-linecap="round" opacity=".6"/><circle cx="92" cy="34" r="14" fill="#fff" opacity=".8"/></svg>
+      <svg class="cloud c2" viewBox="0 0 220 110" aria-hidden="true"><defs><linearGradient id="cg1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset=".7" stop-color="#f4fbff"/><stop offset="1" stop-color="#cfe6f5"/></linearGradient></defs><g fill="url(#cg1)"><circle cx="60" cy="66" r="34"/><circle cx="104" cy="48" r="42"/><circle cx="150" cy="62" r="34"/><circle cx="182" cy="78" r="22"/><circle cx="34" cy="82" r="20"/><rect x="30" y="70" width="170" height="32" rx="16"/></g><path d="M40 98 H 190" stroke="#bcd9ec" stroke-width="6" stroke-linecap="round" opacity=".6"/><circle cx="92" cy="34" r="14" fill="#fff" opacity=".8"/></svg>
+      <svg class="cloud c3" viewBox="0 0 220 110" aria-hidden="true"><defs><linearGradient id="cg2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset=".7" stop-color="#f4fbff"/><stop offset="1" stop-color="#cfe6f5"/></linearGradient></defs><g fill="url(#cg2)"><circle cx="60" cy="66" r="34"/><circle cx="104" cy="48" r="42"/><circle cx="150" cy="62" r="34"/><circle cx="182" cy="78" r="22"/><circle cx="34" cy="82" r="20"/><rect x="30" y="70" width="170" height="32" rx="16"/></g><path d="M40 98 H 190" stroke="#bcd9ec" stroke-width="6" stroke-linecap="round" opacity=".6"/><circle cx="92" cy="34" r="14" fill="#fff" opacity=".8"/></svg>
+      <div class="hero-birds" aria-hidden="true">
+        <svg viewBox="0 0 40 20"><path d="M2 10 Q 10 2, 20 10 Q 30 2, 38 10" fill="none" stroke="#24412a" stroke-width="2.6" stroke-linecap="round"/></svg>
+        <svg viewBox="0 0 40 20"><path d="M2 10 Q 10 2, 20 10 Q 30 2, 38 10" fill="none" stroke="#24412a" stroke-width="2.6" stroke-linecap="round"/></svg>
+        <svg viewBox="0 0 40 20"><path d="M2 10 Q 10 2, 20 10 Q 30 2, 38 10" fill="none" stroke="#24412a" stroke-width="2.6" stroke-linecap="round"/></svg>
+      </div>
       <div class="wrap hero-copy">
         <span class="badge">Oakville · Burlington · Milton</span>
         <h1>Your best lawn<br /><span class="grad">starts here.</span></h1>
@@ -70,9 +77,7 @@ const icon: Record<string, string> = {
         <div class="svc-grid">
           {services.map((s) => (
             <article class="svc reveal">
-              <span class="svc-blob" style={`background:${blobs[s.hue]}`}>
-                <svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="#173A1C" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d={icon[s.hue]} /></svg>
-              </span>
+              <div class="svc-scene" style={`background:${blobs[s.hue]}`}><ServiceArt kind={s.hue} /></div>
               <h3>{s.title}</h3>
               <p>{s.text}</p>
             </article>
@@ -81,7 +86,7 @@ const icon: Record<string, string> = {
       </div>
     </section>
 
-    <YearTimeline client:load />
+    <YearTimeline client:only="react" />
 
     <section class="section packages" id="packages" aria-labelledby="packages-title">
       <div class="wrap">
