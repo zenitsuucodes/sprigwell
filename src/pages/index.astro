@@ -81,7 +81,7 @@ const icon: Record<string, string> = {
       </div>
     </section>
 
-    <YearTimeline client:visible />
+    <YearTimeline client:load />
 
     <section class="section packages" id="packages" aria-labelledby="packages-title">
       <div class="wrap">
@@ -90,7 +90,7 @@ const icon: Record<string, string> = {
           <h2 id="packages-title">Build your year. <span class="grad">See the total.</span></h2>
           <p>Tick what you want covered. Packages you pinned on the timeline are already here, and the chart shows when the work happens.</p>
         </div>
-        <PackagePicker client:visible />
+        <PackagePicker client:load />
       </div>
     </section>
 
