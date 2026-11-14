@@ -128,7 +128,7 @@ const icon: Record<string, string> = {
           </ul>
           <p class="call">Rather talk? <a href={`tel:${brand.phoneHref}`}>{brand.phone}</a></p>
         </div>
-        <div class="book-card"><Booking client:visible /></div>
+        <div class="book-card"><Booking client:only="react" /></div>
       </div>
     </section>
 
